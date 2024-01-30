@@ -21,7 +21,7 @@ from process_pavitra_emissions import plot_ground_elevated
 #%%
 #Define the source CRS and the data corners in lat long
 #Modify if needed
-source_crs = "+proj=merc +units=m +a=6370000.0 +b=6370000. +lon_0=80.0 +lat_ts=15.0"
+source_crs = "+proj=merc +units=m +a=6370000.0 +b=6370000.0 +lon_0=80.0 +lat_ts=15.0 +no_defs"
 CtmGridXo = 39.01822
 CtmGridYo = -12.875168
 
@@ -133,6 +133,10 @@ print("Index and Value for min longitude:", min_lon_index, lon_values[min_lon_in
 print("Index and Value for max longitude:", max_lon_index, lon_values[max_lon_index])
 print("Index and Value for min latitude:", min_lat_index, lat_values[min_lat_index])
 print("Index and Value for max latitude:", max_lat_index, lat_values[max_lat_index])
+
+#%%
+# Determine the range of indexes in nc files that fall within the 4 corners for online dust emissions
+#WORK in progress
 
 '''
 # Modify NC files using Bash. 

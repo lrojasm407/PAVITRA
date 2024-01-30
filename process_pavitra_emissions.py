@@ -118,16 +118,92 @@ def process_netCDF_and_save(file_path, variable_names, pollutant, output_path, i
     return concatenated_gdf.head()
 
 
+#%%
+def increase_resolution_VOC(file_path, output_path):
+    #Notice that we are not dividing the values as the units ate kg/m2/s (flux)
+    # Read the GeoPandas DataFrame from the file
+    gdf = gpd.read_file(file_path)
+
+    #Store new data
+    new_rows = []
+
+    for index, row in gdf.iterrows():
+        x, y = row['geometry'].x, row['geometry'].y
+
+        # Generate a 5x5 grid around the point
+        # Can be generalized later
+        for i in range(-2, 3):
+            for j in range(-2, 3):
+                new_x = x + i * 0.05
+                new_y = y + j * 0.05
+
+                # Create a new point geometry
+                new_point = Point(new_x, new_y)
+
+                # Create a new row with the original columns
+                new_row = {col: row[col] for col in gdf.columns}
+
+                # Update the geometry with the new point
+                new_row['geometry'] = new_point
+
+                new_rows.append(new_row)
+
+    # Create a new GeoDataFrame with the generated points
+    new_gdf = gpd.GeoDataFrame(new_rows, columns=gdf.columns, crs=gdf.crs)
+
+    # Save the new GeoDataFrame to the output path
+    new_gdf.to_file(output_path)
+
+    # Return the head of the GeoDataFrame
+    return new_gdf.head()
+
 def process_netCDF_dust_and_save(file_path, variable_names, pollutant, output_path, input_crs="EPSG:4326", target_crs=None):
     #extract data
+    #This code works for data with time dimension of 24, where both LAT and LONG have extra dimensions
     nc_dataset = Dataset(file_path, "r")
     #splits data in ground and ene and fill is empty values with zeroes
     ground = nc_dataset.variables[variable_names[0]][:]
     ground[ground == 1e+20] = 0
+    ground[ground == 9.969209968386869e+36] = 0
     ground_time_avg = np.mean(ground, axis=0)
 
     latitudes = nc_dataset.variables["XLAT"][0][:,1]
     longitudes = nc_dataset.variables["XLONG"][0][1,:]
+
+    points = []
+    for lat in np.array(latitudes):
+        for lon in np.array(longitudes):
+            point = Point(lon, lat)
+            points.append(point)
+
+    gdf = gpd.GeoDataFrame(geometry=points)
+    gdf[pollutant] = ground_time_avg.flatten()
+
+    gdf.crs=input_crs
+
+    # If the target CRS is different from the input CRS, convert to the target CRS
+    if target_crs:
+        gdf = gdf.to_crs(target_crs)
+
+    # Save the GeoDataFrame to the specified output path with the chosen name
+    output_file = output_path # You can change the file format if needed
+    gdf.to_file(output_file)
+
+    # Return the head of the GeoDataFrame
+    return gdf.head()
+
+def process_netCDF_dust_and_save_2(file_path, variable_names, pollutant, output_path, input_crs="EPSG:4326", target_crs=None):
+    #extract data
+    #This code works for data with time dimension of 1, processed using montly files
+    nc_dataset = Dataset(file_path, "r")
+    #splits data in ground and ene and fill is empty values with zeroes
+    ground = nc_dataset.variables[variable_names[0]][:]
+    ground[ground == 1e+20] = 0
+    ground[ground == 9.969209968386869e+36] = 0
+    ground_time_avg = np.mean(ground, axis=0)
+
+    latitudes = nc_dataset.variables["XLAT"][:]
+    longitudes = nc_dataset.variables["XLONG"][:]
 
     points = []
     for lat in np.array(latitudes):
