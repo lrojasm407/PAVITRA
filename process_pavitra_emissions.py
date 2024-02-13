@@ -299,14 +299,17 @@ def plot_ground_elevated_shapefile(shapefile_path, pollutant, borders_path, targ
     plt.show()
 
 
-def plot_inmap_wrf_bias(gdf, borders_path, target_crs, inmap_column_name, wrf_column_name, bias_column_name):
+def plot_inmap_wrf_bias(gdf, borders_path, target_crs, inmap_column_name, wrf_column_name, bias_column_name, percentile, assign_crs = None):
     # Load and convert 'border_gdf' to the specified CRS
     border_gdf = gpd.read_file(borders_path)
     border_gdf = border_gdf.to_crs(target_crs)
 
+    if assign_crs:
+        gdf.crs = assign_crs
+
     # Define the color scale range based on the minimum and maximum values of the two columns
     vmin = gdf[inmap_column_name].min()
-    vmax = gdf[inmap_column_name].max()
+    vmax = np.percentile(gdf[inmap_column_name],percentile)
     vmax_bias = max(gdf[bias_column_name].max(), abs(gdf[bias_column_name].min()))
 
     # Create subplots with 1 row and 3 columns
@@ -314,11 +317,11 @@ def plot_inmap_wrf_bias(gdf, borders_path, target_crs, inmap_column_name, wrf_co
 
     # Plot the specified column from gdf on the left subplot with the 'batlow' colormap
     gdf.plot(column=inmap_column_name, cmap=cm.batlow, legend=True, ax=axes[0], vmin=vmin, vmax=vmax)
-    axes[0].set_title(f'{inmap_column_name} InMAP ug/m3')
+    axes[0].set_title(f'{inmap_column_name} InMAP (μg / m\u00B3)')
 
     # Plot the specified column from gdf on the middle subplot with the 'batlow' colormap
     gdf.plot(column=wrf_column_name, cmap=cm.batlow, legend=True, ax=axes[1], vmin=vmin, vmax=vmax)
-    axes[1].set_title(f'{wrf_column_name} WRFCHEM ug/m3')
+    axes[1].set_title(f'{wrf_column_name} (μg / m\u00B3)')
 
     # Plot the specified column from gdf on the right subplot with the 'vik' colormap for bias
     gdf.plot(column=bias_column_name, cmap=cm.vik, legend=True, ax=axes[2], vmin=-vmax_bias, vmax=vmax_bias)
